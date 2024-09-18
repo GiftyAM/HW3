@@ -1,0 +1,135 @@
+---
+title: "C1survey"
+author: "Gifty"
+date: "2024-08-29"
+output: html_document
+---
+
+# 1. Import class one survey data from our Github site (https://github.com/kijohnson/ADA-2024) (The dataset is called ‘Class 1 Survey Fall 2024_di.csv’), calling the R dataframe that you create C1survey.
+```{r}
+library(readr)
+c1survey <- read_csv("https://raw.githubusercontent.com/kijohnson/ADA-2024/main/Class%201%20(Getting%20started%20and%20RR%20I)/Lab/Class%201%20Survey%20Fall%202024_di.csv") 
+```
+# 2. Determine: a. the number of observations (i.e. the number of people who filled out the survey) and b. the number of variables in the dataframe.
+
+```{r}
+dim(c1survey)
+```
+# There are 29 observations and 27 variables in the dataframe
+
+
+#3. a. Rename the column variables to something shorter and that is descriptive of what the variable is about (for example like_dogs for the ‘Do you like dogs?’ question variable) and b. Display that they are renamed.
+
+```{r}
+colnames(c1survey)
+```
+
+```{r}
+names(c1survey)[2:27]<- c("like_cats", "like_dogs", "desert_essentials", "slogan", "fav_day", "lark_owl_hummingbird", "fav_food", "fav_drink", "fav_season", "fav_month", "hobby", "program", "specialization", "stat_software", "R_experience", "coding_comfort", "coding_experience", "hopes", "interest_area", "fav_number", "birth_day", "birth_month", "country", "state", "city", "education")
+```
+
+```{r}
+View(c1survey)
+```
+
+#4.Write code to determine and display the number of factor, integer, numerical, and character variables there are in the C1survey dataset.
+
+```{r}
+summary(c1survey)
+```
+```{r}
+table(sapply(c1survey, class))
+```
+
+#5. a. Using code, check the bday and bmonth variables for any unusual or missing values. If you find any, b. describe what you will do with the unusual values in a comment before or immediately following the code that does it, and c. after you have cleaned up any unusual values, find the median bday and month. *Note: please make sure that your bday and month variables are numeric before doing statistics
+
+```{r}
+c1survey$birth_day
+c1survey$birth_month
+```
+
+```{r}
+class(c1survey$birth_day)
+c1survey$birth_day <- as.numeric(c1survey$birth_day)
+```
+
+```{r}
+c1survey$birth_month <- as.numeric(c1survey$birth_month)
+```
+
+```{r}
+median(c1survey$birth_day, na.rm=TRUE) 
+median(c1survey$birth_month, na.rm=TRUE) 
+```
+
+#6.**a.** Create a new variable called *bseason* that gives the season according to Northern Meteorological season in which respondents were born (winter = 12/1 to 2/29, spring = 3/1 to 5/31, summer = 6/1 to 8/31, fall = 9/1 to 11/30). **b**. Using the table function, print a table of Seasons in the columns and bmonths in the rows that allows you to check that the coding is correct **c**. Sum the columns using the addmargins function to answer the question of how many classmates were born in each season? Include your answer in the code. 
+a. 
+```{r}
+library(dplyr)
+c1survey <- c1survey %>%
+  mutate(bseason=case_when(birth_month %in% c(12,1,2) ~"Winter",
+                           birth_month %in% c(3,4,5) ~"Spring",
+                           birth_month %in% c(6,7,8) ~"Summer",
+                           birth_month %in% c(9,10,11) ~"Fall"))
+table(c1survey$birth_month, c1survey$bseason) 
+c1survey$bseason_f<-factor(c1survey$bseason, levels=c("Winter", "Spring", "Summer", "Fall"))
+
+```
+b.
+```{r}
+season_table <- table(c1survey$bseason, c1survey$birth_month)
+print(season_table)
+```
+c.
+```{r}
+season_sums <- addmargins(season_table)
+print(season_sums)
+```
+#7. Pick your favorite variable or variables to analyze, come up with a question you want to answer with that variable or variables, generate the code, and provide an answer to your question. Describe what you did using comments (i.e. #'s).
+
+#I would like to explore whether there is a common pet preference (dogs vs cats) among larks, owls or hummingbirds
+```{r} 
+c1survey <- c1survey %>%
+  mutate(pet_pref = case_when(
+    like_dogs == "Yes" & like_cats == "Yes" ~ "Both",
+    like_dogs == "Yes" & like_cats == "No"  ~ "Dogs",
+    like_dogs == "No"  & like_cats == "Yes" ~ "Cats",
+    TRUE ~ "Neither" 
+  )) #creating a combined pet preference variable
+```
+
+```{r}
+# Displaying the table of pet preferences after creating the new variable
+pet_pref_table <- table(c1survey$pet_pref)
+
+print(pet_pref_table)
+```
+
+```{r}
+#Loading necessary libraries
+library(tidyr)
+#Analyzing pet preference by sleep type
+
+pet_sleep_summary <- c1survey %>%
+  group_by(lark_owl_hummingbird, pet_pref) %>%
+  summarise(count = n()) %>%
+  pivot_wider(names_from = pet_pref, values_from = count, values_fill = 0)
+
+#displaying the table
+print(pet_sleep_summary)
+
+```
+
+```{r}
+#converting to a regular data frame since pet_sleep_summary_with_margins <- addmargins(as.table(pet_sleep_summary)) did not work
+pet_sleep_summary_df <- as.data.frame(pet_sleep_summary)
+#Adding margins to sum rows and columns
+pet_sleep_summary_with_margins <- addmargins(as.matrix(pet_sleep_summary_df[,-1])) # Remove the first column (sleep_pref)
+rownames(pet_sleep_summary_with_margins) <- pet_sleep_summary_df$sleep_pref
+#Displaying the table with added margins
+print(pet_sleep_summary_with_margins)
+```
+# [1,]= Hummingbird, [2,]= Lark, [3,]= Owl, [4,]= Sum
+There are more hummingbirds (12) than larks (6) and owls (11). Larks are the least represented. Most people in this dataset generally do not like cats or dogs. Hummingbirds have the highest number (6) preferring neither cats nor dogs. They also have a moderate number liking both pets (4).
+Larks show a minimal preference for pets. They have the least number of both-pet likers (2) and none who prefer only cats or dogs.
+Owls have more diverse pet preference. They show a moderate preference for both pets (3), a higher number liking only dogs (3), and a notable number who like neither (5).
